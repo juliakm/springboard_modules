@@ -7,6 +7,7 @@
  */
 
 /**
+<<<<<<< HEAD
  * Implements hook_install().
  */
 function sba_message_install() {
@@ -863,6 +864,8 @@ function sba_message_install() {
 
 }
 /**
+=======
+>>>>>>> JacksonRiver/7.x-4.x
  * Implements hook_schema().
  */
 function sba_message_schema() {
@@ -978,34 +981,6 @@ function sba_message_uninstall() {
   _sba_message_delete_fields();
 
   field_purge_batch(1000);
-}
-
-
-/**
- * Delete springboard message fields
- */
-function _sba_message_delete_fields() {
-  $fields = array(
-    'field_sba_signature',
-    'field_sba_action_id',
-    'field_sba_placeholder_greeting',
-    'field_sba_greeting',
-    'field_sba_message',
-    'field_sba_subject',
-    'field_sba_user_editable',
-    'field_sba_subject_editable',
-    'field_sba_editable_area_optional',
-    'field_sba_editable_area',
-    'field_sba_bottom_conclusion'
-  );
-  foreach ($fields as $field_name) {
-    if($field = field_info_field($field_name)){
-      if (isset($field['bundles']['sba_message']))
-      field_delete_field($field_name);
-    }
-  }
-  drupal_set_message('Sba Message fields deleted.');
-  field_group_field_attach_delete_bundle('sba_message','sba_message_action_message');
 }
 
 /**
