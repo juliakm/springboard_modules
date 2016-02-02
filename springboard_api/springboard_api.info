@@ -3,8 +3,7 @@ description = Provides a remote API for working with petitions and donation form
 package = Jackson River Springboard - extras
 core = 7.x
 version = 7.x-4.1.0
-configure = admin/config/services/springboard_social
+configure = admin/config/services/springboard_api
 dependencies[] = services
 files[] = tests/springboard_api.test
 php = 5.3
-
