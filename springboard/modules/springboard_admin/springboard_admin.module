@@ -190,6 +190,19 @@ function springboard_admin_form_springboard_admin_settings_alter(&$form, &$form_
       '#description' => t('Force the use of the springboard_backend theme on all Springboard-related administrative pages. The administrative theme set at admin/appearence will still be used for other Drupal administrative pages.'),
       '#default_value' => variable_get('springboard_theme_enable', 1),
     );
+    $themes = list_themes();
+    $theme_options = array();
+    foreach($themes as $key=>$theme) {
+      $theme_options[$key] = $theme->name;
+    }
+    $form['admin']['springboard_listed_themes'] = array(
+      '#type' => 'select',
+      '#title' => t('Choose themes to disclose to Springboard Admin users.'),
+      '#description' => t('Allows administrators to control the list of themes available for use in page wrappers.'),
+      '#multiple' => TRUE,
+      '#options' => $theme_options,
+      '#default_value' => variable_get('springboard_listed_themes', array('springboard_base', 'springboard_frontend', 'springboard_backend')),
+    );
     $roles = user_roles(TRUE, 'access springboard dashboard');
     $form['admin']['springboard_user_experience'] = array(
       '#type' => 'checkboxes',
@@ -629,20 +642,22 @@ function springboard_admin_asset_page() {
   $used_types = array();
   $tables = array();
   // Render the views tables for the appropriate set of content types.
-  foreach ($set_types as $key => $type) {
-    if ($type !== 0 && in_array($type, array_keys($node_types))) {
-      $used_types[$type] = $node_types[$type];
-      $view = views_get_view('sbv_assets');
-      $view -> set_display('block_1');
-      $view -> set_arguments(array($type));
-      $view -> pre_execute();
-      $view -> execute();
-      if ($view && $view -> access('block_1')) {
-        if(!empty($view -> result)) {
-          $tables[$type] = $view -> render();
-        }
-        else {
-          $tables[$type] = "<p>" . t('No @type have been created yet.', array('@type' => $node_types[$type]->name . 's')) . "</p>";
+  if(module_exists('springboard_views')) {
+    foreach ($set_types as $key => $type) {
+      if ($type !== 0 && in_array($type, array_keys($node_types))) {
+        $used_types[$type] = $node_types[$type];
+        $view = views_get_view('sbv_assets');
+        $view->set_display('block_1');
+        $view->set_arguments(array($type));
+        $view->pre_execute();
+        $view->execute();
+        if ($view && $view->access('block_1')) {
+          if (!empty($view->result)) {
+            $tables[$type] = $view->render();
+          }
+          else {
+            $tables[$type] = "<p>" . t('No @type have been created yet.', array('@type' => $node_types[$type]->name . 's')) . "</p>";
+          }
         }
       }
     }
@@ -775,16 +790,18 @@ function springboard_admin_forms_page($springboard_type) {
   }
 
   // Render the views tables for the appropriate set of content types.
-  foreach ($display_types as $type) {
-    $view = views_get_view('sbv_forms');
-    $view -> set_display($display);
-    $view -> set_arguments(array($type->type));
-    $view -> pre_execute();
-    $view -> execute();
+  if(module_exists('springboard_views')) {
+    foreach ($display_types as $type) {
+      $view = views_get_view('sbv_forms');
+      $view->set_display($display);
+      $view->set_arguments(array($type->type));
+      $view->pre_execute();
+      $view->execute();
 
-    $tables[$type->type] = '';
-    if ($view && $view -> access($display)) {
-      $tables[$type->type] = $view -> render();
+      $tables[$type->type] = '';
+      if ($view && $view->access($display)) {
+        $tables[$type->type] = $view->render();
+      }
     }
   }
   return theme('springboard_admin_forms_page', array('types' => $display_types, 'springboard_type' => $springboard_type, 'tables' => $tables));
@@ -815,25 +832,27 @@ function springboard_admin_template_page() {
   $output = '';
 
   // Load Page Wrappers view.
-  $view = views_get_view('sbv_page_wrappers');
-  $view -> set_display('block_1');
-  $view -> set_arguments(array());
-  $view -> pre_execute();
-  $view -> execute();
-  if ($view && $view -> access('block_1') && !empty($view -> result)) {
-    $output .= '<h2>' . $view -> get_title('block_1') . '</h2>';
-    $output .= $view -> render();
-  }
+  if(module_exists('springboard_views')) {
+    $view = views_get_view('sbv_page_wrappers');
+    $view->set_display('block_1');
+    $view->set_arguments(array());
+    $view->pre_execute();
+    $view->execute();
+    if ($view && $view->access('block_1') && !empty($view->result)) {
+      $output .= '<h2>' . $view->get_title('block_1') . '</h2>';
+      $output .= $view->render();
+    }
 
-  // Load Email Templates view.
-  $view = views_get_view('sbv_email_templates');
-  $view -> set_display('block_1');
-  $view -> set_arguments(array());
-  $view -> pre_execute();
-  $view -> execute();
-  if ($view && $view -> access('block_1') && !empty($view -> result)) {
-    $output .= '<h2>' . $view -> get_title('block_1') . '</h2>';
-    $output .= $view -> render();
+    // Load Email Templates view.
+    $view = views_get_view('sbv_email_templates');
+    $view->set_display('block_1');
+    $view->set_arguments(array());
+    $view->pre_execute();
+    $view->execute();
+    if ($view && $view->access('block_1') && !empty($view->result)) {
+      $output .= '<h2>' . $view->get_title('block_1') . '</h2>';
+      $output .= $view->render();
+    }
   }
 
   return $output;
@@ -954,7 +973,7 @@ function springboard_admin_springboard_admin_alias_patterns() {
         'replacement' => FALSE,
       ),
     ),
-    // Webform A/B Associated Webforms page.
+    // Multivariate Testing-associated Webforms page.
     'node/%/webforms' => array(
       'path' => array(
         'regex' => '|^/node/([0-9]+)/webforms(/.*)?$|',

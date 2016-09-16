@@ -54,7 +54,8 @@ function webform_user_create_missing_users($node_id) {
         array(
           $chunk,
           $node_id,
-          'details' => t('(Processing chunk @chunk of @count)', array('@chunk' => $i, '@count' => $chunk_count)))
+          'details' => t('(Processing chunk @chunk of @count)', array('@chunk' => $i, '@count' => $chunk_count)),
+        ),
       );
     }
 
@@ -63,7 +64,7 @@ function webform_user_create_missing_users($node_id) {
       'title' => t('Creating missing webform users'),
       'init_message' => t('Initializing'),
       'error_message' => t('An error occurred'),
-      'finished' => 'webform_user_create_missing_users_batch_process_complete'
+      'finished' => 'webform_user_create_missing_users_batch_process_complete',
     );
 
     batch_set($batch);
@@ -74,6 +75,9 @@ function webform_user_create_missing_users($node_id) {
   }
 }
 
+/**
+ *
+ */
 function webform_user_create_missing_users_batch_process($chunk, $node_id, $operation_details, &$context) {
   module_load_include('inc', 'webform', 'includes/webform.submissions');
 
@@ -87,7 +91,7 @@ function webform_user_create_missing_users_batch_process($chunk, $node_id, $oper
     WHERE `s`.`sid` IN (:submission_ids) ORDER BY `s`.`sid` ASC;';
 
   $result = db_query($query, array(
-    ':submission_ids' => implode(',', $chunk),
+    ':submission_ids' => $chunk,
   ));
 
   $submissions = array();
@@ -102,9 +106,16 @@ function webform_user_create_missing_users_batch_process($chunk, $node_id, $oper
 
   // Create users from the webform submissions.
   foreach ($submissions as $sid => $submission) {
+    // Skip this submission if mail is empty, otherwise we create a user account
+    // with a blank name, mail, and init field.
+    if (empty($submission['mail'])) {
+      drush_log(dt('Submission @sid missing $submission[\'mail\'], skipping user creation', array('@sid' => $sid)), 'warning');
+      continue;
+    }
+
     $account = user_load_by_mail($submission['mail']);
-    
-    // Remove empty string values from submission to avoid datatype exceptions
+
+    // Remove empty string values from submission to avoid datatype exceptions.
     $submission = array_filter($submission, 'strlen');
     if (empty($account)) {
       $user_fields = array(
@@ -118,7 +129,7 @@ function webform_user_create_missing_users_batch_process($chunk, $node_id, $oper
       $account = user_save('', $user_fields);
     }
 
-    _webform_user_save_profile_map($account->uid, $submission);
+    _webform_user_save_profile_map($account, $submission);
 
     $submission = webform_get_submission($node_id, $sid);
     $submission->uid = $account->uid;
@@ -137,16 +148,23 @@ function webform_user_create_missing_users_batch_process($chunk, $node_id, $oper
         'uid' => $account->uid,
         'timestamp' => time(),
       ))->execute();
-    } catch (PDOException $e) {
+    }
+    catch (PDOException $e) {
       print $e->getMessage() . "\n";
     }
   }
 }
 
+/**
+ *
+ */
 function webform_user_create_missing_users_batch_process_complete($success, $results, $operations) {
   print t('Webform user creation complete.');
 }
 
+/**
+ *
+ */
 function webform_user_create_missing_users_create_log_table() {
   if (!db_table_exists('webform_user_create_missing_users_log')) {
     $schema = array(
